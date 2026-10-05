@@ -74,6 +74,7 @@ High-cost orchestrator workflow for large, high-risk, multi-phase coding efforts
 - **Contract**: The invoking agent acts strictly as a scheduler/manager, delegating code changes exclusively to `builder` and follow-ups to `fixer` or `designer`.
 - **Session State**: Tracks phase progression, task statuses, and gate outcomes in an ephemeral, gitignored tracking file.
 - **Phase Execution**: Coordinates implementation tasks across phases with clear dependency boundaries.
+- **Package Installation**: Subagents do not have network access in their sandbox; any required packages or dependencies must be installed separately in the environment prior to task dispatch.
 - **Phase Gates**: Dispatches `oracle` (and optionally `explorer`) to evaluate the full changed surface once all phase tasks complete. Enforces a strict budget of at most 2 re-reviews.
 
 ### [`to-spec`](skills/to-spec/SKILL.md)

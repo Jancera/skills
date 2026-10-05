@@ -34,6 +34,10 @@ Rules that hold for the whole session:
 - Never point a subagent at a file to go read (spec.md, the progress
   file) — embed the relevant content directly in its brief. Gitignored
   files do not exist inside a `builder`'s or `fixer`'s isolated worktree.
+- **Package installation**: Subagents do not have network access in the
+  sandbox. If a task requires a new package or dependency, install it
+  separately in the environment before dispatching the task. Never delegate
+  package installation to a subagent.
 
 ## Setup and state
 
@@ -79,6 +83,10 @@ changes.
   goal, exact files, done-when check, and any spec content it needs.
   Never point `builder` at spec.md or the progress file — both are
   gitignored and will not exist inside its isolated worktree.
+- **Package installation**: Subagents do not have network access inside
+  their sandbox. If a task requires a new package or dependency, install
+  it separately in the active environment before invoking `builder`. Never
+  ask subagents to fetch or install packages.
 - When a brief depends on an unfamiliar dependency, framework, or
   external service, ask `librarian` first so `builder` and `oracle` don't
   redo that research.
