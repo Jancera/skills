@@ -53,10 +53,23 @@ This workflow is built natively on Google Antigravity primitives:
 │   │   └── SKILL.md                # Worktree creation & environment hydration
 │   └── to-spec/
 │       └── SKILL.md                # Testable specification authoring
+├── install.sh                      # Installation & sync script
 └── README.md
 ```
 
 ---
+
+## Installation
+
+To install or synchronize the skills and agents with your local Antigravity configuration (`~/.gemini/config/skills` and `~/.gemini/config/agents`), run:
+
+```bash
+./install.sh
+```
+
+The script:
+- Copies each skill folder into `~/.gemini/config/skills/`
+- Copies each subagent definition into `~/.gemini/config/agents/`
 
 ## Skills
 
