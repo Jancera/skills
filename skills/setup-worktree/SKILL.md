@@ -1,41 +1,32 @@
 ---
 name: setup-worktree
-description: Analyze the project and generate environment hydration instructions for new git worktrees (e.g. copying .venv or node_modules).
+description: Create a new git worktree inside the project directory and automatically hydrate its environment (e.g., copying .venv or node_modules) for immediate implementation.
 ---
 
 # Setup Worktree
 
-This skill analyzes the current project repository and generates a configuration file containing instructions for how to hydrate the environment of a newly created git worktree.
+This skill automates the creation of a new git worktree directly inside the current project and hydrates its environment. This avoids creating worktrees inside `.gemini` and keeps the environment setup simple and fast.
 
-## 1. Analysis
+## 1. Preparation
+1. **Determine the branch name**: Based on the context of the chat (e.g., features discussed), propose a branch name. Ask the user for confirmation if it's not already clear.
+2. **Update `.gitignore`**: Check the `.gitignore` at the root of the project. Ensure that the folder where worktrees will live (e.g., `/.worktrees/`) is ignored. If it is not, add it.
 
-1. Inspect the root of the project to determine the tech stack and environment requirements.
+## 2. Create the Worktree
+1. Use the appropriate tool (e.g., `run_command`) to create the git worktree inside the project folder.
+   - Example command: `git worktree add .worktrees/<branch-name> -b <branch-name>`
+   - *Note:* If branching from a specific commit or if the branch already exists, adjust the git command accordingly.
+
+## 3. Analyze & Hydrate Environment
+1. **Analyze**: Inspect the root of the current project (base branch) to determine the tech stack and environment dependencies.
    - **Python**: Look for `.venv`, `venv`, `requirements.txt`, `pyproject.toml`, `Pipfile`.
    - **Node.js**: Look for `node_modules`, `package.json`, `.nvmrc`.
    - **Rust**: Look for `Cargo.toml`, `target/`.
    - **Environment variables**: Look for `.env`, `.env.local`.
+2. **Hydrate**: Execute commands to copy or link the dependencies into the newly created worktree.
+   - **Fast Copying**: Prefer copying existing environments to save time. 
+   - Example for Python: `cp -a .venv .worktrees/<branch-name>/.venv` and `cp .env .worktrees/<branch-name>/.env`
+   - Example for Node.js: `cp -a node_modules .worktrees/<branch-name>/node_modules`
 
-## 2. Generate Instructions
-
-1. Based on the analysis, write specific, runnable commands (e.g., bash commands) that will copy, link, or reinstall the necessary environment dependencies from the parent repository into a new worktree.
-2. Assume the user is running these commands from the root of the *new* worktree, and the parent/main repository is located at a known relative path (usually `../<main-repo-folder>`). Use placeholder variables like `$MAIN_REPO_PATH` if the exact path isn't known, but explain how to use it.
-3. Consider speed and reliability: Prefer fast commands like `cp -a ../main/.venv .venv` or `ln -s` over running `npm install` or `pip install` from scratch if possible.
-4. Save these instructions into `.gemini/worktree-setup.md`.
-
-## 3. Format of `.gemini/worktree-setup.md`
-
-The file should clearly list the steps needed to hydrate a worktree. Example structure:
-
-```markdown
-# Worktree Environment Setup
-
-This project uses [Tech Stack]. When creating a new git worktree, run the following commands from the root of the new worktree to hydrate the environment:
-
-\`\`\`bash
-# Example for Python
-cp -a ../main-repo/.venv .venv
-cp ../main-repo/.env .env
-\`\`\`
-```
-
-4. Stop and inform the user that the setup instructions have been saved.
+## 4. Finalize
+1. Confirm to the user that the worktree has been successfully created and hydrated.
+2. Inform the user of the path (e.g., `.worktrees/<branch-name>`) so they can navigate to it or open it in their IDE and start implementing.
