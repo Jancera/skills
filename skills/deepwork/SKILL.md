@@ -27,13 +27,16 @@ Specialists available via `invoke_subagent`:
 - `designer` — UI/UX
 - `fixer` — bounded mechanical follow-up
 - `explorer` — structure/dependency-boundary scans
-- `builder` — sandboxed implementation, one worktree per task
+- `builder` — sandboxed implementation directly in the active workspace
 
 Rules that hold for the whole session:
 - Single-level only: never let a specialist invoke another specialist.
+- **No new worktrees or branches**: Subagents must NEVER create new worktrees,
+  branches, or environments. Always invoke subagents with `Workspace: inherit`.
+  The user sets up the environment manually (via worktree or branch) prior to
+  starting deepwork; subagents execute directly in this pre-hydrated workspace.
 - Never point a subagent at a file to go read (spec.md, the progress
-  file) — embed the relevant content directly in its brief. Gitignored
-  files do not exist inside a `builder`'s or `fixer`'s isolated worktree.
+  file) — embed the relevant content directly in its brief.
 - **Package installation**: Subagents do not have network access in the
   sandbox. If a task requires a new package or dependency, install it
   separately in the environment before dispatching the task. Never delegate
@@ -41,7 +44,7 @@ Rules that hold for the whole session:
 
 ## Setup and state
 
-Maintain a progress file at `docs/deepwork/<task-slug>.md`. It is
+Maintain a progress file at `.deepwork/<task-slug>.md`. It is
 **gitignored, never committed** — bookkeeping for this session only, not
 something any subagent is told to open. Do not follow a rigid template;
 capture whatever is useful:
@@ -50,8 +53,7 @@ capture whatever is useful:
 - accepted research from `librarian` (reference file paths, don't copy
   content in)
 - phase order, specialist ownership per phase, gate order and rationale
-- per-task status: worktree branch, dependency-merge state, review-gate
-  outcome
+- per-task status: task id, files changed, review-gate outcome
 - unresolved questions, blockers, follow-ups
 
 Update it after major decisions, reviews, phase completions, and scope
@@ -59,8 +61,7 @@ changes.
 
 ## Planning
 
-1. Ensure a spec exists at `docs/specs/<slug>/spec.md` (e.g. generated via `to-spec`). It should be **gitignored**,
-   not committed. Stop for user approval.
+1. Ensure a spec exists (e.g. generated via `to-spec`). Stop for user approval.
 2. From the approved spec, choose a small number of coherent **phases**
    based on the work's dependencies and natural delivery boundaries. Do
    not split phases merely to shrink an Oracle review's scope.
@@ -74,15 +75,13 @@ changes.
 
 ## Phase execution
 
-- Within a phase, invoke `builder` once per task, each in its own
-  `workspace: branch` worktree branched from `dev`. Run parallel-safe
-  tasks concurrently; dependent tasks wait until their dependency has
-  merged to `dev` — never branch-stack from another task's unmerged
-  branch.
+- Within a phase, invoke `builder` once per task using `Workspace: inherit`.
+  **Never create new worktrees or branches, and never use `workspace: branch`**.
+  The environment and workspace are already manually set up by the user prior
+  to deepwork; subagents must execute directly in the existing workspace.
 - Embed each task's full brief as text in the `invoke_subagent` call:
   goal, exact files, done-when check, and any spec content it needs.
-  Never point `builder` at spec.md or the progress file — both are
-  gitignored and will not exist inside its isolated worktree.
+  Never point `builder` at a file to go read.
 - **Package installation**: Subagents do not have network access inside
   their sandbox. If a task requires a new package or dependency, install
   it separately in the active environment before invoking `builder`. Never
@@ -90,21 +89,16 @@ changes.
 - When a brief depends on an unfamiliar dependency, framework, or
   external service, ask `librarian` first so `builder` and `oracle` don't
   redo that research.
-- After each `builder` run reports success, the **user** reviews that
-  task's branch manually/interactively (clicks through it like a real
-  user would) and decides whether to merge it to `dev`. Merging is always
-  a manual, user-triggered action — never automatic, and never done by
-  `deepwork` itself.
+- After each `builder` run reports success, report the files changed and
+  let the **user** review or validate the changes interactively.
 - If a `builder` run fails because its own sandbox blocked something
   (denied network, denied write, permission-rule violation), report it
   and stop. Do not auto-retry with relaxed permissions, and do not
   silently re-triage.
-- Before starting a task that depends on another, ask the user whether
-  the dependency has been merged to `dev` yet, rather than polling `dev`.
 
 ## Phase gate (mandatory)
 
-Once every task in the phase has merged to `dev`:
+Once every task in the phase is complete:
 
 1. Invoke `oracle` against the phase's full changed surface (not task by
    task). Give it the phase goal, changed paths, validation evidence, the
@@ -119,8 +113,8 @@ Once every task in the phase has merged to `dev`:
    reviewed decision/risk, or the original concern can't be verified with
    focused evidence — never for a mechanical or already-verified change.
 4. Route bounded mechanical remediation to `fixer` (sandboxed, same
-   discipline as `builder`). Route UI/UX regressions to `designer`, never
-   to `fixer`.
+  discipline as `builder`, `workspace: inherit`). Route UI/UX regressions
+  to `designer`, never to `fixer`.
 5. If both re-reviews are exhausted and a material risk remains, record
    it in the progress file and ask the user to accept the risk, change
    scope, or authorize an exceptional additional review.
