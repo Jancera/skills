@@ -86,7 +86,7 @@ Authors focused, testable feature specifications by synthesizing the current con
 Socratic design-tree interview protocol to stress-test ideas and uncover hidden assumptions.
 - **Design Tree Frontier**: Formulates decisions as branching trees, asking the frontier of unblocked questions in batched rounds with recommended options.
 - **Zero-Guessing Invariant**: Agent dispatches research for environment facts rather than asking the user, reserving user questions strictly for design decisions.
-- **Outcome**: Finishes only when the frontier is empty and a complete shared understanding is confirmed.
+- **Outcome & Handoff**: Finishes only when the frontier is empty and a complete shared understanding is confirmed. Strictly discovery-only (never modifies code); concludes by presenting next-step options (authoring a spec with `/to-spec`, documenting ADRs/notes, or planning execution) and waits for user direction.
 
 ### [`domain-modeling`](skills/domain-modeling/SKILL.md)
 Builds and sharpens a project's domain model, vocabulary, and architectural decision records (ADRs) as design progresses.
