@@ -2,7 +2,7 @@
 
 An opinionated collection of custom skills and specialized subagents for **Google Antigravity**.
 
-This repository defines an isolated, multi-agent development workflow tailored for complex, high-risk coding tasks. It combines Socratic design discovery, structured specifications, vertical-slice implementation in isolated git worktrees, OS-native command sandboxing, and rigorous review gates.
+This repository defines an isolated, multi-agent development workflow tailored for complex, high-risk coding tasks. It combines Socratic design discovery, structured specifications, workspace preparation in hydrated worktrees or branches, OS-native command sandboxing, and rigorous review gates.
 
 ---
 
@@ -10,11 +10,12 @@ This repository defines an isolated, multi-agent development workflow tailored f
 
 This workflow is built natively on Google Antigravity primitives:
 
-1. **Native Worktree Isolation (`workspace: branch`)**:
-   - Each implementation task executes in an ephemeral, isolated git worktree branching directly from `dev`.
-   - Never stacks branches from unmerged tasks; dependent tasks wait until prior work merges into `dev`.
-2. **OS-Native Sandboxing (`commandExecutionPolicy: sandbox`)**:
-   - Implementation and fixing agents execute in a hardened environment (Linux kernel namespaces / macOS Seatbelt).
+1. **Mandatory Initial Setup (User Decision: Worktree or Branch)**:
+   - Before implementation begins, a **mandatory initial phase** prepares the isolated environment: either a dedicated **git worktree** (created and hydrated via `setup-worktree`) or a standard **git branch**.
+   - The user decides which mechanism to use based on project needs and workflow preferences.
+   - Implementation subagents run directly in the prepared environment (`workspace: inherit`), preserving all pre-hydrated dependencies (such as `.venv` or `node_modules`) without duplicating environment overhead.
+2. **OS-Native Sandboxing Across All Subagents (`commandExecutionPolicy: sandbox`)**:
+   - **All subagents execute within a hardened sandbox environment** (Linux kernel namespaces / macOS Seatbelt).
    - Paired with `autoExecutionPolicy: proceed-in-sandbox`: commands within the sandbox run without prompts; host mutations and remote Git (`git push`) require explicit approval.
    - Read-only inspection utilities (`grep`, `tail`, `head`, `cat`, `find`, `wc`, `git status/log/diff/show`) are auto-approved globally.
    - Network access is denied by default; tasks receive access only via explicit allowlists.
@@ -24,7 +25,7 @@ This workflow is built natively on Google Antigravity primitives:
    - Every task yields an independently runnable and testable increment.
 4. **Human-in-the-Loop Verification**:
    - Implementations are manually inspected and interactively validated by the user before merging.
-   - Merging into `dev` is always an explicit user action—never automated by agents.
+   - Merging into `dev` or `main` is always an explicit user action—never automated by agents.
 
 ---
 
@@ -34,22 +35,22 @@ This workflow is built natively on Google Antigravity primitives:
 .
 ├── agents/                         # Specialist subagent definitions
 │   ├── builder.md                  # Sandboxed task implementer
-│   ├── designer.md                 # UI/UX specialist
-│   ├── explorer.md                 # Structural & dependency boundary scanner
+│   ├── designer.md                 # Sandboxed UI/UX specialist
+│   ├── explorer.md                 # Sandboxed structural & dependency boundary scanner
 │   ├── fixer.md                    # Sandboxed mechanical follow-up
-│   ├── librarian.md                # Fact-grounded codebase & external researcher
-│   └── oracle.md                   # Reviewer for bugs, security & maintainability
-├── docs/                           # Architectural design documents (gitignored)
-│   └── agentic-workflow-spec.md    # Design rationale & platform research
+│   ├── librarian.md                # Sandboxed codebase & external researcher
+│   └── oracle.md                   # Sandboxed reviewer for bugs, security & maintainability
 ├── skills/                         # High-level workflows & orchestrators
 │   ├── deepwork/
 │   │   └── SKILL.md                # Multi-phase, gated orchestrator workflow
+│   ├── domain-modeling/
+│   │   └── SKILL.md                # Domain model & vocabulary definition
+│   ├── grill-with-docs/
+│   │   └── SKILL.md                # Design interview producing ADRs & glossary
 │   ├── grilling/
 │   │   └── SKILL.md                # Socratic design-tree interviewer
-│   ├── implement-spec/
-│   │   └── SKILL.md                # Execution orchestrator for medium tasks
 │   ├── setup-worktree/
-│   │   └── SKILL.md                # Environment hydration automation
+│   │   └── SKILL.md                # Worktree creation & environment hydration
 │   └── to-spec/
 │       └── SKILL.md                # Testable specification authoring
 └── README.md
@@ -61,12 +62,24 @@ This workflow is built natively on Google Antigravity primitives:
 
 Skills extend the orchestrating agent with structured protocols:
 
+### [`setup-worktree`](skills/setup-worktree/SKILL.md)
+Creates a new git worktree inside the project directory and automatically hydrates its environment for immediate implementation.
+- **Preparation**: Confirms the target branch name and ensures the worktree directory (`/.worktrees/`) is ignored in `.gitignore`.
+- **Worktree Creation**: Creates the worktree directly within `.worktrees/<branch-name>`.
+- **Environment Hydration**: Inspects the project tech stack (Python, Node.js, Rust, env files) and executes fast copying of existing environments (e.g., `cp -a .venv ...`, `cp -a node_modules ...`, `.env`).
+- **Use Case**: Used during the mandatory initial phase when an isolated worktree is preferred over a simple branch.
+
 ### [`deepwork`](skills/deepwork/SKILL.md)
 High-cost orchestrator workflow for large, high-risk, multi-phase coding efforts.
 - **Contract**: The invoking agent acts strictly as a scheduler/manager, delegating code changes exclusively to `builder` and follow-ups to `fixer` or `designer`.
-- **Session State**: Tracks phase progression, worktree branches, and gate outcomes in an ephemeral, gitignored file (`docs/deepwork/<task-slug>.md`).
-- **Phase Execution**: Dispatches parallel-safe tasks concurrently in isolated worktrees (`workspace: branch`).
-- **Phase Gates**: Dispatches `oracle` (and optionally `explorer`) to evaluate the full changed surface once all phase tasks merge to `dev`. Enforces a strict budget of at most 2 re-reviews.
+- **Session State**: Tracks phase progression, task statuses, and gate outcomes in an ephemeral, gitignored tracking file.
+- **Phase Execution**: Coordinates implementation tasks across phases with clear dependency boundaries.
+- **Phase Gates**: Dispatches `oracle` (and optionally `explorer`) to evaluate the full changed surface once all phase tasks complete. Enforces a strict budget of at most 2 re-reviews.
+
+### [`to-spec`](skills/to-spec/SKILL.md)
+Authors focused, testable feature specifications by synthesizing the current conversation (no interview required).
+- Captures problem statement, user stories, implementation decisions, and testing criteria.
+- **Direct Implementation Path**: For simple tasks, authoring the spec with `/to-spec` and instructing the main agent to implement it directly is the recommended lightweight path (no heavy orchestrator needed).
 
 ### [`grilling`](skills/grilling/SKILL.md)
 Socratic design-tree interview protocol to stress-test ideas and uncover hidden assumptions.
@@ -74,56 +87,65 @@ Socratic design-tree interview protocol to stress-test ideas and uncover hidden 
 - **Zero-Guessing Invariant**: Agent dispatches research for environment facts rather than asking the user, reserving user questions strictly for design decisions.
 - **Outcome**: Finishes only when the frontier is empty and a complete shared understanding is confirmed.
 
-### [`to-spec`](skills/to-spec/SKILL.md)
-Authors focused, testable feature specifications at `docs/specs/<slug>/spec.md` by synthesizing the current conversation (no interview required).
+### [`domain-modeling`](skills/domain-modeling/SKILL.md)
+Builds and sharpens a project's domain model, vocabulary, and architectural decision records (ADRs) as design progresses.
 
-### [`implement-spec`](skills/implement-spec/SKILL.md)
-Plans and executes medium-sized features based on a spec. A lightweight alternative to `deepwork` that runs sequentially in the current `Workspace: inherit` environment.
-
-### [`setup-worktree`](skills/setup-worktree/SKILL.md)
-Analyzes the tech stack and writes an environment hydration script to `.gemini/worktree-setup.md`, ensuring all branched worktrees possess the right dependencies (like `.venv` or `node_modules`).
+### [`grill-with-docs`](skills/grill-with-docs/SKILL.md)
+Combines Socratic design interviewing with domain modeling to stress-test plans while capturing ADRs and domain glossaries.
 
 ---
 
 ## Specialist Subagents
 
-Configured in `agents/` with tailored permissions, tools, and model tiers:
+Configured in `agents/` with tailored permissions, tools, and model tiers. **All subagents run sandboxed** within Antigravity's OS-native sandbox:
 
 | Agent | Model | Sandboxed | Primary Role |
 | :--- | :--- | :---: | :--- |
-| **[`builder`](agents/builder.md)** | `flash` | Yes | Executes task-level code changes in isolated worktrees (`workspace: branch`). Makes the smallest possible diff satisfying the task brief. |
-| **[`oracle`](agents/oracle.md)** | `pro` | No | Read-only reviewer evaluating the full changed surface across bugs, security, maintainability, and regression risk. |
-| **[`designer`](agents/designer.md)** | `pro` | No | UI/UX authority for layout, rhythm, motion, color, affordances, component feel, and responsive behaviors. |
-| **[`fixer`](agents/fixer.md)** | `flash` | Yes | Sandboxed mechanical remediation (wiring, unit tests, typing, non-visual bugfixes) for accepted findings. |
-| **[`librarian`](agents/librarian.md)** | `pro` | No | Deep research on unfamiliar dependencies, libraries, APIs, or codebase architecture. Cites exact `file:line` locations and external documentation. |
-| **[`explorer`](agents/explorer.md)** | `flash` | No | Read-only structural analysis of module boundaries, dependency directions, and file placements following phase changes. |
+| **[`builder`](agents/builder.md)** | `pro` | Yes | Executes task-level code changes in the active workspace (`workspace: inherit`). Makes the smallest possible diff satisfying the task brief. |
+| **[`oracle`](agents/oracle.md)** | `pro` | Yes | Read-only reviewer evaluating the full changed surface across bugs, security, maintainability, and regression risk. |
+| **[`designer`](agents/designer.md)** | `pro` | Yes | UI/UX authority for layout, rhythm, motion, color, affordances, component feel, and responsive behaviors. |
+| **[`fixer`](agents/fixer.md)** | `flash` | Yes | Bounded mechanical remediation (wiring, unit tests, typing, non-visual bugfixes) for accepted findings. |
+| **[`librarian`](agents/librarian.md)** | `pro` | Yes | Fact-grounded codebase and external research. Cites exact `file:line` locations and official documentation. |
+| **[`explorer`](agents/explorer.md)** | `flash` | Yes | Read-only structural analysis of module boundaries, dependency directions, and file placements following phase changes. |
 
 ---
 
 ## Workflow Lifecycle
 
-A typical complex feature lifecycle follows these stages:
+A typical feature lifecycle follows these stages:
 
 ```mermaid
 flowchart TD
-    A["1. Ideation & Stress-Testing\n(/grilling)"] --> B["2. Spec Authoring\n(to-spec)"]
-    B --> C["3. Phase Planning & Execution\n(implement-spec / deepwork)"]
-    C --> D["4. Sandboxed Implementation\n(builder in isolated worktrees)"]
-    D --> E["5. Interactive User Review & Merge\n(Manual git merge to dev)"]
-    E --> F{"All tasks in\nphase merged?"}
-    F -- No --> D
-    F -- Yes --> G["6. Mandatory Phase Gate\n(oracle + explorer)"]
-    G --> H{"Findings\nAccepted?"}
-    H -- Mechanical --> I["Remediation\n(fixer)"]
-    H -- Design/UI --> J["Design Polish\n(designer)"]
-    I --> G
-    J --> G
-    H -- Clean --> K["Next Phase or Completion"]
+    A["1. Ideation & Stress-Testing\n(/grilling)"] --> B["2. Spec Authoring\n(/to-spec)"]
+    B --> C{"3. Mandatory Initial Setup\n(User Decision)"}
+    C -->|"Worktree (setup-worktree)"| D["Hydrated Worktree Created\n(.worktrees/branch-name)"]
+    C -->|"Git Branch"| E["New Branch Created"]
+    D --> F{"Complexity Check"}
+    E --> F
+    F -->|"Simple Task"| G["Direct Implementation\n(Main Agent in active workspace)"]
+    F -->|"Complex / Multi-Phase"| H["Deepwork Orchestration\n(/deepwork)"]
+    H --> I["Task Implementation\n(builder subagent)"]
+    I --> J["Interactive User Review & Validation"]
+    J --> K{"All Tasks in\nPhase Done?"}
+    K -->|"No"| I
+    K -->|"Yes"| L["Phase Review Gate\n(oracle + explorer)"]
+    L --> M{"Findings?"}
+    M -->|"Mechanical"| N["Remediation\n(fixer)"]
+    M -->|"Design / UI"| O["Design Polish\n(designer)"]
+    N --> L
+    O --> L
+    M -->|"Clean / Accepted"| P["Next Phase or Completion"]
+    G --> Q["Completion & Review"]
 ```
 
-1. **Clarify Intent**: Run `/grilling` to resolve design ambiguities and settle constraints.
-2. **Define the Spec**: Run `to-spec` to synthesize the discussion into testable criteria in `docs/specs/<slug>/spec.md`.
-3. **Plan & Decompose**: Initialize `implement-spec` (for medium tasks) or `deepwork` (for massive features) to break the feature into vertical-slice tasks.
-4. **Implement in Sandboxes**: Dispatch `builder` subagents into isolated worktrees (`workspace: branch`) with network denied by default.
-5. **Verify & Merge**: User checks out the branch, tests it interactively, and merges into `dev`.
-6. **Evaluate Phase Gate**: Run `oracle` against the phase's cumulative diff (max 2 re-reviews). Route fixes to `fixer` (mechanical) or `designer` (visual).
+1. **Clarify Intent**: Run `/grilling` to resolve design ambiguities, explore trade-offs, and settle constraints.
+2. **Define the Spec**: Run `/to-spec` to synthesize the discussion into testable user stories and criteria.
+3. **Mandatory Initial Setup (User Decides)**:
+   - **Worktree**: Run `/setup-worktree` to generate `.worktrees/<branch-name>` and hydrate dependencies (`.venv`, `node_modules`, `.env`).
+   - **Branch**: Alternatively, create and check out a dedicated git branch directly.
+4. **Choose Execution Path**:
+   - **Simple Tasks**: Ask the main agent to implement the spec directly within the active workspace. No orchestrator overhead needed.
+   - **Complex Tasks**: Activate `/deepwork` for multi-phase planning, coordinating sandboxed subagents across phased gates.
+5. **Implement in Sandbox**: For deepwork, dispatch `builder` subagents (`workspace: inherit`) with network denied by default to execute focused vertical slices.
+6. **Verify & Validate**: User inspects changes interactively and validates functionality before merging.
+7. **Evaluate Phase Gate**: Run `oracle` against cumulative phase diffs (max 2 re-reviews). Route findings to `fixer` (mechanical) or `designer` (visual).
