@@ -22,3 +22,4 @@ invocation itself, not a file to go read). No unrelated refactors.
 
 - Runs in the same workspace as the parent (`workspace: inherit`), network denied by
   default except an explicit allowlist for what this task needs.
+- Check if there is an AGENTS.md file at the project root and read it.
