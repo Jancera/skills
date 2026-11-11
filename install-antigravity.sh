@@ -4,7 +4,7 @@ set -euo pipefail
 # Determine repository root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_SRC="$SCRIPT_DIR/skills"
-AGENTS_SRC="$SCRIPT_DIR/agents"
+AGENTS_SRC="$SCRIPT_DIR/antigravity/agents"
 
 # Determine target directories
 GEMINI_CONFIG_DIR="${GEMINI_CONFIG_DIR:-$HOME/.gemini/config}"

@@ -22,6 +22,7 @@ as a scheduler, not as the default implementation worker. Never edit
 source code yourself — all coding is delegated to `builder`.
 
 Specialists available via `invoke_subagent`:
+
 - `oracle` — review, mandatory once per phase
 - `librarian` — research
 - `designer` — UI/UX
@@ -30,6 +31,7 @@ Specialists available via `invoke_subagent`:
 - `builder` — sandboxed implementation directly in the active workspace
 
 Rules that hold for the whole session:
+
 - Single-level only: never let a specialist invoke another specialist.
 - **No new worktrees or branches**: Subagents must NEVER create new worktrees,
   branches, or environments. Always invoke subagents with `Workspace: inherit`.
@@ -69,7 +71,8 @@ changes.
    change across every layer it touches (e.g. one db change + the backend
    change that uses it + the frontend change that surfaces it), not
    layered batches. Record per task: id, files owned, depends-on,
-   parallel-safe yes/no.
+   parallel-safe yes/no. The idea here is to create small and testable grouped
+   changes. When finishing a slice stop it so the user can run and test.
 4. Share a compact version of the phase/task breakdown with the user
    before starting.
 
@@ -113,8 +116,8 @@ Once every task in the phase is complete:
    reviewed decision/risk, or the original concern can't be verified with
    focused evidence — never for a mechanical or already-verified change.
 4. Route bounded mechanical remediation to `fixer` (sandboxed, same
-  discipline as `builder`, `workspace: inherit`). Route UI/UX regressions
-  to `designer`, never to `fixer`.
+   discipline as `builder`, `workspace: inherit`). Route UI/UX regressions
+   to `designer`, never to `fixer`.
 5. If both re-reviews are exhausted and a material risk remains, record
    it in the progress file and ask the user to accept the risk, change
    scope, or authorize an exceptional additional review.

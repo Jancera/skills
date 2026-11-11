@@ -3,7 +3,7 @@ name: builder
 description: Sandboxed general-purpose implementer. Use for all task-level file edits and code changes.
 mainAgent: false
 subagent: true
-model: pro
+model: flash
 workspace: inherit
 commandExecutionPolicy: sandbox
 tools:
